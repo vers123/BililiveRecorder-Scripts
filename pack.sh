@@ -20,16 +20,19 @@ case "${1:-}" in
 esac
 
 # 文件名带后缀，彻底防止覆盖
-NAME="bilirec-kit-$(date +%F)-$suffix.tar.gz"
+NAME="bilirec-kit-$(date +%Y-%m-%d)-$suffix.tar.gz"
 OUT="$DIST_DIR/$NAME"
 
 excludes=(
-  --exclude='BililiveRecorder-CLI-linux'
+  --exclude='BililiveRecorder-CLI-*'
   --exclude='recordings/*.flv'
   --exclude='recordings/*.jpg'
   --exclude='run'
   --exclude='logs'
   --exclude='pack.sh'
+  --exclude='pack.ps1'
+  --exclude='.trae'
+  --exclude='.git'
   --exclude='dist'             # 排除 dist 自身，防止套娃
 )
 [ "$with_cookie" -eq 0 ] && excludes+=(--exclude='cookie')
@@ -40,13 +43,15 @@ tar -czf "$OUT" "${excludes[@]}" -C "$(dirname "$PWD")" "$(basename "$PWD")"
 fail=0
 list=$(tar -tzf "$OUT")
 
-echo "$list" | grep -qE '\.(flv|jpg)$'                 && { echo "❌ 混入视频"; fail=1; }
-echo "$list" | grep -qE '/(run|logs|dist)/'             && { echo "❌ 混入 run/logs/dist"; fail=1; }
-echo "$list" | grep -qE 'BililiveRecorder-CLI-linux/'   && { echo "❌ 混入程序本体"; fail=1; }
-echo "$list" | grep -qE '/pack\.sh$'                    && { echo "❌ 混入 pack.sh"; fail=1; }
+echo "$list" | grep -qE '\.(flv|jpg)$'                     && { echo "❌ 混入视频"; fail=1; }
+echo "$list" | grep -qE '/(run|logs|dist)/'                 && { echo "❌ 混入 run/logs/dist"; fail=1; }
+echo "$list" | grep -qE 'BililiveRecorder-CLI-[^/]+/'       && { echo "❌ 混入程序本体"; fail=1; }
+echo "$list" | grep -qE '/pack\.(sh|ps1)$'                  && { echo "❌ 混入打包脚本"; fail=1; }
 [ "$with_cookie" -eq 0 ] && echo "$list" | grep -q 'cookie/' && { echo "❌ --public 混入 cookie"; fail=1; }
 
-for f in README.md LICENSE common.sh start.sh stop.sh status.sh restart.sh; do
+for f in README.md LICENSE \
+         common.sh start.sh stop.sh status.sh restart.sh \
+         common.ps1 start.ps1 stop.ps1 status.ps1 restart.ps1; do
   echo "$list" | grep -qE "/$f$" || { echo "❌ 缺少 $f"; fail=1; }
 done
 

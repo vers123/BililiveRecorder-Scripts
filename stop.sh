@@ -34,7 +34,7 @@ else
 fi
 
 # 优雅等待
-for i in $(seq 1 "$STOP_TIMEOUT"); do
+for ((i = 1; i <= STOP_TIMEOUT; i++)); do
   kill -0 "$pid" 2>/dev/null || break
   sleep 1
   if [ $((i % 5)) -eq 0 ]; then

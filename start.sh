@@ -36,12 +36,29 @@ if [ -z "$mode" ]; then
   esac
 fi
 
-if [ ! -x "$BIN" ]; then
-  echo "错误：找不到可执行文件 $BIN"
+# 程序本体检查（由 common.sh 自动探测）
+if [ "${#BIN_CMD[@]}" -eq 0 ]; then
+  printf '%s\n' "$BIN_ERROR"
   exit 1
 fi
 
-# 已在运行则直接退出（PID 文件或 pgrep 命中都算）
+if [ "$BIN_KIND" = "native" ]; then
+  if [ ! -x "$BIN" ]; then
+    echo "错误：找不到可执行文件 $BIN"
+    exit 1
+  fi
+else
+  if ! command -v dotnet >/dev/null 2>&1; then
+    echo "错误：any 版需要 dotnet，但 PATH 中没有 dotnet"
+    exit 1
+  fi
+  if [ ! -f "$BIN" ]; then
+    echo "错误：找不到程序文件 $BIN"
+    exit 1
+  fi
+fi
+
+# 已在运行则直接退出（PID 文件或进程扫描命中都算）
 running_pid=$(get_pid || true)
 if [ -n "${running_pid:-}" ]; then
   echo "已经在运行，PID=$running_pid"
@@ -49,9 +66,12 @@ if [ -n "${running_pid:-}" ]; then
   exit 0
 fi
 
+# 启动前处理 cookie（自动写入 config.json 或提示手动填写）
+maybe_apply_cookie
+
 if [ "$mode" = "fg" ]; then
   echo ">>> 前台运行中，按 Ctrl+C 停止"
-  exec "$BIN" run --bind "$BIND" "$WORKDIR"
+  exec "${BIN_CMD[@]}" run --bind "$BIND" "$WORKDIR"
 fi
 
 # 后台模式：加锁防止并发双开
@@ -72,13 +92,13 @@ fi
 
 rotate_log
 echo ">>> 后台运行中，日志：$LOG"
-nohup "$BIN" run --bind "$BIND" "$WORKDIR" > "$LOG" 2>&1 < /dev/null &
+nohup "${BIN_CMD[@]}" run --bind "$BIND" "$WORKDIR" > "$LOG" 2>&1 < /dev/null &
 pid=$!
 echo "$pid" > "$PIDFILE"
 
 # 最多等 10 秒：进程存活且 HTTP 就绪
 ready=0
-for _ in $(seq 1 10); do
+for ((i = 1; i <= 10; i++)); do
   if ! kill -0 "$pid" 2>/dev/null; then
     break
   fi

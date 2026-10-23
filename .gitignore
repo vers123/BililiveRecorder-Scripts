@@ -1,5 +1,5 @@
 # === 程序本体 ===
-BililiveRecorder-CLI-linux/
+BililiveRecorder-CLI-*/
 
 # === 录制文件（视频、封面等） ===
 recordings/*
@@ -14,6 +14,9 @@ run/
 logs/
 dist/
 *.log
+
+# === 编辑器 / 本地计划文档 ===
+.trae/
 
 # === 系统垃圾 ===
 .DS_Store

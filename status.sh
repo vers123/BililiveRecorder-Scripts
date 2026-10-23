@@ -18,6 +18,12 @@ else
 fi
 
 echo "--------------------------------------------------------------"
+echo "平台     : ${OS}/${ARCH}"
+if [ "${#BIN_CMD[@]}" -gt 0 ]; then
+  echo "程序本体 : $BIN"
+else
+  echo "程序本体 : 未找到（把 BililiveRecorder-CLI-<平台>-<架构> 解压到本目录）"
+fi
 echo "监听地址 : $BIND"
 echo "工作目录 : $WORKDIR"
 echo "日志文件 : $LOG"
