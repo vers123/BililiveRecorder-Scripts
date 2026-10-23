@@ -157,9 +157,15 @@ function Test-RecorderRunning {
 }
 
 # 返回 HTTP 状态码字符串；连接失败返回 000
+# 监听地址可能是通配形式（http://*:2356、http://0.0.0.0:2356、http://[::]:2356），
+# 本机探测时要换成 localhost
+function Get-HttpCheckUrl {
+  return ($Bind -replace '(://)(\*|0\.0\.0\.0|\[::\])(:)', '$1localhost$3')
+}
+
 function Get-HttpCode {
   try {
-    $response = Invoke-WebRequest -Uri $Bind -UseBasicParsing -TimeoutSec 3 -ErrorAction Stop
+    $response = Invoke-WebRequest -Uri (Get-HttpCheckUrl) -UseBasicParsing -TimeoutSec 3 -ErrorAction Stop
     return [string][int]$response.StatusCode
   }
   catch {
@@ -329,7 +335,7 @@ function Invoke-CookieSetup {
   }
   catch {
     Write-Host ('cookie 未导入：' + $_.Exception.Message)
-    Write-Host ('可继续启动，稍后在 Web 界面手动填写：' + $Bind)
+    Write-Host ('可继续启动，稍后在 Web 界面手动填写：' + (Get-HttpCheckUrl))
     return
   }
 
@@ -357,11 +363,11 @@ function Invoke-CookieSetup {
       }
       catch {
         Write-Host ('Cookie 写入失败：' + $_.Exception.Message)
-        Write-Host ('请在 Web 界面手动填写：' + $Bind)
+        Write-Host ('请在 Web 界面手动填写：' + (Get-HttpCheckUrl))
       }
     }
     '2' {
-      Write-Host "已跳过自动填写。启动后访问 $Bind → 设置 → 全局 → Cookie 粘贴并保存。"
+      Write-Host ("已跳过自动填写。启动后访问 $(Get-HttpCheckUrl) → 设置 → 全局 → Cookie 粘贴并保存。")
     }
     default {
       Write-Host "无效选择：$answer（将跳过自动填写）"

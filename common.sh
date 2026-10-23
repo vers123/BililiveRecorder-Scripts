@@ -197,14 +197,21 @@ get_pid() {
 
 is_running() { get_pid >/dev/null 2>&1; }
 
+# 监听地址可能是通配形式（http://*:2356、http://0.0.0.0:2356、http://[::]:2356），
+# 本机探测时要换成 localhost
+http_check_url() {
+  printf '%s' "$BIND" | sed -E 's#(://)(\*|0\.0\.0\.0|\[::\])(:)#\1localhost\3#'
+}
+
 # 返回 HTTP 状态码；未安装 curl 时返回 nocurl
 http_code() {
   if ! command -v curl >/dev/null 2>&1; then
     echo "nocurl"
     return
   fi
-  local code
-  code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 3 "$BIND" 2>/dev/null)
+  local code url
+  url=$(http_check_url)
+  code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 3 "$url" 2>/dev/null)
   echo "${code:-000}"
 }
 
@@ -229,16 +236,18 @@ rotate_log() {
 #   SESSDATA=xxx; bili_jct=yyy; buvid3=zzz
 
 COOKIE_ERROR=""
+COOKIE_VALUE=""
 
 cookie_item_count() {
   printf '%s' "$1" | awk -F';' '{ n = 0; for (i = 1; i <= NF; i++) if ($i ~ /=/) n++; print n }'
 }
 
-# 规范化 cookie 文件内容；成功时输出 Header String，失败时设置 COOKIE_ERROR
+# 规范化 cookie 文件内容；成功时写入 COOKIE_VALUE，失败时设置 COOKIE_ERROR
 normalize_cookie() {
   local file="$1" content line out="" net
 
   COOKIE_ERROR=""
+  COOKIE_VALUE=""
 
   if [ ! -f "$file" ]; then
     COOKIE_ERROR="cookie 文件不存在：$file"
@@ -320,7 +329,7 @@ EOF
     return 1
   fi
 
-  printf '%s' "$out"
+  COOKIE_VALUE="$out"
   return 0
 }
 
@@ -460,11 +469,12 @@ maybe_apply_cookie() {
 
   local cookie count sess answer
 
-  cookie=$(normalize_cookie "$COOKIE_FILE") || {
+  if ! normalize_cookie "$COOKIE_FILE"; then
     echo "cookie 未导入：$COOKIE_ERROR"
-    echo "可继续启动，稍后在 Web 界面手动填写：$BIND"
+    echo "可继续启动，稍后在 Web 界面手动填写：$(http_check_url)"
     return 0
-  }
+  fi
+  cookie="$COOKIE_VALUE"
 
   count=$(cookie_item_count "$cookie")
   case "$cookie" in
@@ -490,11 +500,11 @@ maybe_apply_cookie() {
         echo "Cookie 已写入 $CONFIG_JSON"
       else
         echo "Cookie 写入失败：$COOKIE_ERROR"
-        echo "请在 Web 界面手动填写：$BIND"
+        echo "请在 Web 界面手动填写：$(http_check_url)"
       fi
       ;;
     2)
-      echo "已跳过自动填写。启动后访问 $BIND → 设置 → 全局 → Cookie 粘贴并保存。"
+      echo "已跳过自动填写。启动后访问 $(http_check_url) → 设置 → 全局 → Cookie 粘贴并保存。"
       ;;
     *)
       echo "无效选择：$answer（将跳过自动填写）"
