@@ -1,0 +1,25 @@
+{
+  "version": 3,
+  "global": {
+    "SaveStreamCover": {
+      "HasValue": true,
+      "Value": true
+    },
+    "Cookie": {
+      "HasValue": false,
+      "Value": ""
+    }
+  },
+  "rooms": [
+    {
+      "RoomId": {
+        "HasValue": true,
+        "Value": 123456
+      },
+      "AutoRecord": {
+        "HasValue": true,
+        "Value": true
+      }
+    }
+  ]
+}

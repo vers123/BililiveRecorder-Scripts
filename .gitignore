@@ -1,0 +1,20 @@
+# === 程序本体 ===
+BililiveRecorder-CLI-linux/
+
+# === 录制文件（视频、封面等） ===
+recordings/*
+!recordings/config.json.example
+
+# === 隐私与配置 ===
+cookie/
+*.bak
+
+# === 运行产物 ===
+run/
+logs/
+dist/
+*.log
+
+# === 系统垃圾 ===
+.DS_Store
+Thumbs.db
